@@ -11,14 +11,12 @@ custom_css = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Montserrat:wght@700;800&display=swap');
 
-    /* Fondo principal Dark de Kuepa */
     [data-testid="stAppViewContainer"], .stApp {
         background-color: #292929;
         color: #FAFAFA;
         font-family: 'Barlow', sans-serif;
     }
 
-    /* FORZAR COLOR BLANCO EN TODOS LOS TEXTOS DE STREAMLIT */
     label p, 
     div[data-baseweb="radio"] div, 
     .stMarkdown p, 
@@ -29,7 +27,6 @@ custom_css = """
         font-size: 1.05rem;
     }
 
-    /* Títulos */
     h1, h2, h3 {
         font-family: 'Montserrat', sans-serif;
         text-transform: uppercase;
@@ -38,9 +35,8 @@ custom_css = """
 
     h1 { color: #FD531E !important; font-size: 2.5rem !important; }
     h2 { color: #FD531E !important; border-bottom: 2px solid #FD531E; padding-bottom: 10px; margin-bottom: 20px;}
-    h3 { color: #FAFAFA !important; } /* Subtítulos en blanco para contrastar */
+    h3 { color: #FAFAFA !important; } 
 
-    /* SOLUCIÓN AL LOGO: Contenedor blanco (Badge effect) */
     [data-testid="stImage"] img {
         background-color: #FAFAFA;
         padding: 15px 20px;
@@ -48,7 +44,6 @@ custom_css = """
         box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
 
-    /* Estilo de Tarjetas de Actividad (Resultados de IA) */
     .activity-box {
         background-color: #333333;
         border-left: 5px solid #FD531E;
@@ -65,7 +60,6 @@ custom_css = """
         margin-top: 0;
     }
 
-    /* Botones */
     .stButton>button {
         background-color: #FD531E;
         color: white !important;
@@ -84,10 +78,7 @@ custom_css = """
         transform: translateY(-2px);
     }
 
-    /* Pestañas (Tabs) */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 15px;
-    }
+    .stTabs [data-baseweb="tab-list"] { gap: 15px; }
 
     .stTabs [data-baseweb="tab-list"] button {
         background-color: #333333;
@@ -175,21 +166,50 @@ with tab1:
             sel_s = st.selectbox("Sector Industrial:", sorted(sectores))
             ctx = f"Sector Industrial: {sel_s}"
             
-        tema = st.text_input("Tema de la sesión (ej. Conciliación bancaria, Empatía digital):")
+        c3, c4 = st.columns([2, 1])
+        tema = c3.text_input("Tema de la sesión (ej. Conciliación bancaria, Empatía digital):")
+        formato_recurso = c4.selectbox("Formato del Recurso:", [
+            "🎲 Aleatorio (Recomendado por IA)", 
+            "📊 Tabla de Datos", 
+            "📈 Análisis de Gráfico / Tendencia", 
+            "📖 Caso Real / Storytelling", 
+            "✉️ Simulación de Comunicación", 
+            "🕵️‍♂️ Diagnóstico de Error"
+        ])
 
     if st.button("🚀 GENERAR RETO DISRUPTIVO"):
         if tema:
             with st.spinner("Diseñando experiencia de aprendizaje..."):
+                
+                # INSTRUCCIÓN CONDICIONAL SEGÚN EL FORMATO ELEGIDO
+                if "Aleatorio" in formato_recurso:
+                    instruccion_formato = """
+                    EL INSTRUCTOR ELIGIÓ MODO ALEATORIO. 
+                    ELIGE el formato que mejor se adapte al tema entre: Tabla de datos, Descripción de un gráfico, Caso de estudio, Simulación de correo/chat urgente, o Diagnóstico de un error en un proceso.
+                    """
+                elif "Tabla" in formato_recurso:
+                    instruccion_formato = "OBLIGATORIO: Presenta el problema creando una pequeña tabla de datos crudos (máximo 5 filas) en formato Markdown para que el estudiante trabaje sobre ella."
+                elif "Gráfico" in formato_recurso:
+                    instruccion_formato = "OBLIGATORIO: Presenta el problema describiendo textualmente el comportamiento de una gráfica o indicador (ej. 'Las ventas de Enero fueron X y en Febrero cayeron a Y...')."
+                elif "Caso Real" in formato_recurso:
+                    instruccion_formato = "OBLIGATORIO: Presenta el problema narrando un caso real, historia o storytelling inmersivo de algo que ocurrió hoy en la empresa/sector."
+                elif "Simulación" in formato_recurso:
+                    instruccion_formato = "OBLIGATORIO: Presenta el problema simulando una comunicación real (ej. El texto exacto de un correo de un cliente furioso, o un WhatsApp urgente del jefe pidiendo ayuda)."
+                elif "Diagnóstico" in formato_recurso:
+                    instruccion_formato = "OBLIGATORIO: Presenta un proceso que se hizo MAL (un error en una factura, un mal servicio, un paso omitido) para que el estudiante actúe como auditor/solucionador."
+
                 prompt = f"""
-                Actúa como un Diseñador Instruccional Senior de Kuepa. Crea un reto de 20 min para el programa {p_sel} sobre {tema}.
+                Actúa como un Diseñador Instruccional Senior de Kuepa. Crea un reto de 20 min para el programa {p_sel} sobre el tema '{tema}'.
                 Contexto: {ctx}
+
+                {instruccion_formato}
 
                 ESTRUCTURA DE RESPUESTA (Usa Markdown estricto con '##' para cada sección):
                 ## 📝 EL ESCENARIO CREATIVO
-                (Inventa una situación real, un problema o una historia breve del sector/empresa. Entrega aquí los DATOS BASE: cifras, correos, o descripción de una gráfica).
+                (Desarrolla aquí el problema siguiendo ESTRICTAMENTE el formato que se te ordenó arriba. NO asumas que el estudiante tiene acceso a datos de la empresa, entrégale todo aquí).
 
                 ## 🎯 EL RETO (ACCIÓN)
-                (Qué debe hacer el estudiante en 15 min de forma individual).
+                (Qué debe hacer el estudiante individualmente en 15 minutos).
 
                 ## 💻 ENTREGABLE TANGIBLE Y HERRAMIENTAS
                 (Define UN producto digital claro. Obligatorio: Sugiere el uso de una herramienta gratuita (Google Suite, Canva, etc) Y describe cómo el estudiante debe usar una IA -como ChatGPT o Claude- de forma estratégica para mejorar ese entregable).
@@ -201,9 +221,8 @@ with tab1:
                 """
                 
                 try:
-                    res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ).choices[0].message.content
+                    res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ, temperature=0.7).choices[0].message.content
                     
-                    # Dividir la respuesta por secciones para ponerlas en cajas dinámicas
                     sections = res.split("##")
                     for section in sections:
                         if section.strip():

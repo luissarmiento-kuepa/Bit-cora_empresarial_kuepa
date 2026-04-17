@@ -1,23 +1,23 @@
 import streamlit as st
 import pandas as pd
-import google.generativeai as genai
+from groq import Groq
 
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Kuepa Insight Engine", page_icon="🎓", layout="wide")
 
-# --- 2. CONFIGURACIÓN DE IA ---
+# --- 2. CONFIGURACIÓN DE IA (GROQ) ---
 try:
-    if "GEMINI_API_KEY" not in st.secrets:
-        st.error("❌ Falta la clave 'GEMINI_API_KEY' en los Secrets de Streamlit.")
+    if "GROQ_API_KEY" not in st.secrets:
+        st.error("❌ Falta la clave 'GROQ_API_KEY' en los Secrets de Streamlit.")
         st.stop()
     
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    
-    # Intentamos con el nombre de modelo más estable
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    # Inicializamos el cliente de Groq
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    # Definimos el modelo a usar
+    MODELO_GROQ = "llama3-8b-8192" 
     
 except Exception as e:
-    st.error(f"⚠️ Error de configuración: {e}")
+    st.error(f"⚠️ Error de configuración con Groq: {e}")
     st.stop()
 
 # --- 3. CARGA DE DATOS ---
@@ -31,7 +31,7 @@ def load_data():
         df_ent = pd.read_csv(URL, dtype=str)
         df_ent.columns = df_ent.columns.str.strip()
         
-        # Buscar columna de empresa (insensible a mayúsculas/minúsculas)
+        # Buscar columna de empresa
         target = next((c for c in df_ent.columns if "empresa" in c.lower() or "asociadas" in c.lower()), df_ent.columns[0])
         df_ent.rename(columns={target: 'Empresa'}, inplace=True)
         df_ent.fillna("No disponible", inplace=True)
@@ -73,14 +73,18 @@ with t1:
     
     if st.button("🚀 Generar Actividad"):
         if tema:
-            with st.spinner("IA Generando..."):
+            with st.spinner("Groq procesando a la velocidad de la luz..."):
                 try:
                     row = df[df['Empresa'] == e_sel].iloc[0]
                     contexto = "\n".join([f"{k}: {v}" for k, v in row.items()])
-                    prompt = f"Como experto en Kuepa, crea un reto de 15 min sobre {tema} para el programa {p_sel} usando esta info de la empresa {e_sel}: {contexto}. Responde: Reto, Herramientas y KPI."
+                    prompt = f"Como experto en Kuepa, crea un reto de 15 min sobre {tema} para el programa {p_sel} usando esta info de la empresa {e_sel}: {contexto}. Responde: Reto, Herramientas y KPI. Escribe en español."
                     
-                    response = model.generate_content(prompt)
-                    st.markdown(response.text)
+                    # Llamada a Groq
+                    chat_completion = client.chat.completions.create(
+                        messages=[{"role": "user", "content": prompt}],
+                        model=MODELO_GROQ,
+                    )
+                    st.markdown(chat_completion.choices[0].message.content)
                 except Exception as e:
                     st.error(f"Error de la IA: {e}")
 
@@ -90,8 +94,12 @@ with t2:
     e_est = st.selectbox("Empresa:", sorted(df['Empresa'].unique()), key="est_e")
     if st.button("🛡️ Ver Consejos"):
         try:
-            prompt = f"Dame 3 consejos clave para tener éxito en mi práctica en {e_est}."
-            st.write(model.generate_content(prompt).text)
+            prompt = f"Dame 3 consejos clave para tener éxito en mi práctica profesional en la empresa {e_est}. Escribe en español."
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=MODELO_GROQ,
+            )
+            st.write(chat_completion.choices[0].message.content)
         except Exception as e: st.error(f"Error: {e}")
 
 # PESTAÑA GESTORES
@@ -100,6 +108,10 @@ with t3:
     e_gest = st.selectbox("Empresa:", sorted(df['Empresa'].unique()), key="ges_e")
     if st.button("🤝 Generar Guion"):
         try:
-            prompt = f"Genera un guion corto para visitar la empresa {e_gest}."
-            st.markdown(model.generate_content(prompt).text)
+            prompt = f"Genera un guion corto para que un gestor de Kuepa visite la empresa {e_gest} y fortalezca la relación comercial. Escribe en español."
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=MODELO_GROQ,
+            )
+            st.markdown(chat_completion.choices[0].message.content)
         except Exception as e: st.error(f"Error: {e}")

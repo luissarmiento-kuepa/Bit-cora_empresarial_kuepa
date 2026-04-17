@@ -6,7 +6,7 @@ import os
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="MentorIA KP - Técnicos Laborales", page_icon="🎓", layout="wide")
 
-# --- 2. ESTILOS VISUALES (DARK MODE CORREGIDO) ---
+# --- 2. ESTILOS VISUALES (DARK MODE & BRANDING KUEPA) ---
 custom_css = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Montserrat:wght@700;800&display=swap');
@@ -22,7 +22,8 @@ custom_css = """
     .stMarkdown p, 
     div[data-testid="stText"],
     .stSelectbox label,
-    .stTextInput label {
+    .stTextInput label,
+    .stMultiSelect label {
         color: #FAFAFA !important;
         font-size: 1.05rem;
     }
@@ -35,8 +36,7 @@ custom_css = """
 
     h1 { color: #FD531E !important; font-size: 2.5rem !important; }
     h2 { color: #FD531E !important; border-bottom: 2px solid #FD531E; padding-bottom: 10px; margin-bottom: 20px;}
-    h3 { color: #FAFAFA !important; } 
-
+    
     [data-testid="stImage"] img {
         background-color: #FAFAFA;
         padding: 15px 20px;
@@ -156,14 +156,23 @@ with tab1:
     
     with st.container():
         c1, c2 = st.columns(2)
-        p_sel = c1.selectbox("Programa:", sorted(df_prog['Programa'].unique()))
-        t_filtro = c2.radio("Contexto de la actividad:", ["Por Empresa", "Por Sector"], horizontal=True)
+        p_sel = c1.selectbox("Programa Técnico:", sorted(df_prog['Programa'].unique()))
+        t_filtro = c2.radio("Contexto de la actividad:", ["Por Empresas", "Por Sector"], horizontal=True)
         
-        if t_filtro == "Por Empresa":
-            sel_e = st.selectbox("Empresa Destino:", sorted(df['Empresa'].unique()))
-            ctx = f"Empresa: {sel_e}. Bitácora: " + ", ".join([f"{k}:{v}" for k,v in df[df['Empresa']==sel_e].iloc[0].items()])
+        if t_filtro == "Por Empresas":
+            sel_e = st.multiselect("Selecciona las Empresas (Máximo 5):", sorted(df['Empresa'].unique()), max_selections=5)
+            # Construir contexto acumulado de las empresas seleccionadas
+            if sel_e:
+                info_total_empresas = []
+                for emp in sel_e:
+                    row = df[df['Empresa'] == emp].iloc[0]
+                    detalles = ", ".join([f"{k}:{v}" for k,v in row.items() if v != "No disponible"])
+                    info_total_empresas.append(f"EMPRESA: {emp}. Datos: {detalles}")
+                ctx = " | ".join(info_total_empresas)
+            else:
+                ctx = ""
         else:
-            sel_s = st.selectbox("Sector Industrial:", sorted(sectores))
+            sel_s = st.selectbox("Selecciona el Sector Industrial:", sorted(sectores))
             ctx = f"Sector Industrial: {sel_s}"
             
         c3, c4 = st.columns([2, 1])
@@ -178,44 +187,44 @@ with tab1:
         ])
 
     if st.button("🚀 GENERAR RETO DISRUPTIVO"):
-        if tema:
-            with st.spinner("Diseñando experiencia de aprendizaje..."):
+        if tema and (ctx != "" or t_filtro == "Por Sector"):
+            with st.spinner("Diseñando experiencia de aprendizaje multi-entorno..."):
                 
                 # INSTRUCCIÓN CONDICIONAL SEGÚN EL FORMATO ELEGIDO
                 if "Aleatorio" in formato_recurso:
-                    instruccion_formato = """
-                    EL INSTRUCTOR ELIGIÓ MODO ALEATORIO. 
-                    ELIGE el formato que mejor se adapte al tema entre: Tabla de datos, Descripción de un gráfico, Caso de estudio, Simulación de correo/chat urgente, o Diagnóstico de un error en un proceso.
-                    """
+                    instruccion_formato = "ELIGE el formato que mejor se adapte (Tabla, Gráfico, Caso, Simulación o Diagnóstico)."
                 elif "Tabla" in formato_recurso:
-                    instruccion_formato = "OBLIGATORIO: Presenta el problema creando una pequeña tabla de datos crudos (máximo 5 filas) en formato Markdown para que el estudiante trabaje sobre ella."
+                    instruccion_formato = "OBLIGATORIO: Presenta el problema creando una pequeña tabla de datos crudos (máximo 5 filas) en Markdown."
                 elif "Gráfico" in formato_recurso:
-                    instruccion_formato = "OBLIGATORIO: Presenta el problema describiendo textualmente el comportamiento de una gráfica o indicador (ej. 'Las ventas de Enero fueron X y en Febrero cayeron a Y...')."
+                    instruccion_formato = "OBLIGATORIO: Presenta el problema describiendo textualmente el comportamiento de una gráfica o indicador."
                 elif "Caso Real" in formato_recurso:
-                    instruccion_formato = "OBLIGATORIO: Presenta el problema narrando un caso real, historia o storytelling inmersivo de algo que ocurrió hoy en la empresa/sector."
+                    instruccion_formato = "OBLIGATORIO: Presenta el problema narrando un caso real o storytelling inmersivo."
                 elif "Simulación" in formato_recurso:
-                    instruccion_formato = "OBLIGATORIO: Presenta el problema simulando una comunicación real (ej. El texto exacto de un correo de un cliente furioso, o un WhatsApp urgente del jefe pidiendo ayuda)."
+                    instruccion_formato = "OBLIGATORIO: Presenta el problema simulando una comunicación real (Correo, Ticket o WhatsApp)."
                 elif "Diagnóstico" in formato_recurso:
-                    instruccion_formato = "OBLIGATORIO: Presenta un proceso que se hizo MAL (un error en una factura, un mal servicio, un paso omitido) para que el estudiante actúe como auditor/solucionador."
+                    instruccion_formato = "OBLIGATORIO: Presenta un proceso que se hizo MAL para que el estudiante actúe como solucionador."
 
                 prompt = f"""
-                Actúa como un Diseñador Instruccional Senior de Kuepa. Crea un reto de 20 min para el programa {p_sel} sobre el tema '{tema}'.
-                Contexto: {ctx}
+                Actúa como un Diseñador Instruccional Senior de Kuepa. Crea un reto de 20 min para el programa '{p_sel}' sobre el tema '{tema}'.
+                
+                CONTEXTO DE REFERENCIA: {ctx}
+                
+                INSTRUCCIÓN DE FORMATO: {instruccion_formato}
 
-                {instruccion_formato}
+                Si hay varias empresas seleccionadas, crea un reto comparativo o un caso donde el estudiante deba atender requerimientos de estas diferentes entidades.
 
                 ESTRUCTURA DE RESPUESTA (Usa Markdown estricto con '##' para cada sección):
                 ## 📝 EL ESCENARIO CREATIVO
-                (Desarrolla aquí el problema siguiendo ESTRICTAMENTE el formato que se te ordenó arriba. NO asumas que el estudiante tiene acceso a datos de la empresa, entrégale todo aquí).
+                (Desarrolla aquí el problema. Entrega todos los datos base aquí mismo).
 
                 ## 🎯 EL RETO (ACCIÓN)
                 (Qué debe hacer el estudiante individualmente en 15 minutos).
 
                 ## 💻 ENTREGABLE TANGIBLE Y HERRAMIENTAS
-                (Define UN producto digital claro. Obligatorio: Sugiere el uso de una herramienta gratuita (Google Suite, Canva, etc) Y describe cómo el estudiante debe usar una IA -como ChatGPT o Claude- de forma estratégica para mejorar ese entregable).
+                (Define UN producto digital claro. Sugiere el uso de Google Suite/Canva e incluye el uso estratégico de una IA).
 
                 ## 📋 RÚBRICA PARA EL DOCENTE
-                (Crea una lista de 3 elementos clave que el docente debe validar en el entregable para darlo por aprobado).
+                (3 elementos clave a validar).
                 
                 Tono: Profesional, minimalista, inspirador.
                 """
@@ -230,13 +239,13 @@ with tab1:
                 except Exception as e:
                     st.error(f"Error generando actividad: {e}")
         else:
-            st.warning("Escribe un tema primero para generar el reto.")
+            st.warning("Escribe un tema y selecciona al menos una empresa.")
 
 # ==========================================
 # ESTUDIANTES
 # ==========================================
 with tab2:
-    st.markdown("### 🛡️ Guía de Éxito en la Práctica")
+    st.header("🛡️ Guía de Éxito en la Práctica")
     e_est = st.selectbox("Selecciona tu empresa destino:", sorted(df['Empresa'].unique()))
     
     if st.button("🛡️ SOLICITAR CONSEJOS DE MENTORÍA"):

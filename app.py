@@ -14,7 +14,7 @@ try:
     # Inicializamos el cliente de Groq
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
     # Definimos el modelo a usar
-    MODELO_GROQ = "llama3-8b-8192" 
+    MODELO_GROQ = "llama-3.3-70b-versatile" 
     
 except Exception as e:
     st.error(f"⚠️ Error de configuración con Groq: {e}")

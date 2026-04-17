@@ -6,23 +6,30 @@ import os
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="MentorIA KP - Técnicos Laborales", page_icon="🎓", layout="wide")
 
-# --- 2. ESTILOS VISUALES (DARK MODE & BRANDING KUEPA) ---
+# --- 2. ESTILOS VISUALES (DARK MODE CORREGIDO) ---
 custom_css = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Montserrat:wght@700;800&display=swap');
 
     /* Fondo principal Dark de Kuepa */
-    [data-testid="stAppViewContainer"] {
+    [data-testid="stAppViewContainer"], .stApp {
         background-color: #292929;
         color: #FAFAFA;
         font-family: 'Barlow', sans-serif;
     }
 
-    /* Ajuste de Sidebar y Headers */
-    [data-testid="stHeader"], [data-testid="stToolbar"] {
-        background-color: rgba(0,0,0,0);
+    /* FORZAR COLOR BLANCO EN TODOS LOS TEXTOS DE STREAMLIT */
+    label p, 
+    div[data-baseweb="radio"] div, 
+    .stMarkdown p, 
+    div[data-testid="stText"],
+    .stSelectbox label,
+    .stTextInput label {
+        color: #FAFAFA !important;
+        font-size: 1.05rem;
     }
 
+    /* Títulos */
     h1, h2, h3 {
         font-family: 'Montserrat', sans-serif;
         text-transform: uppercase;
@@ -30,9 +37,18 @@ custom_css = """
     }
 
     h1 { color: #FD531E !important; font-size: 2.5rem !important; }
-    h2 { color: #FD531E !important; border-bottom: 2px solid #FD531E; padding-bottom: 10px; }
+    h2 { color: #FD531E !important; border-bottom: 2px solid #FD531E; padding-bottom: 10px; margin-bottom: 20px;}
+    h3 { color: #FAFAFA !important; } /* Subtítulos en blanco para contrastar */
 
-    /* Estilo de Tarjetas de Actividad */
+    /* SOLUCIÓN AL LOGO: Contenedor blanco (Badge effect) */
+    [data-testid="stImage"] img {
+        background-color: #FAFAFA;
+        padding: 15px 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+
+    /* Estilo de Tarjetas de Actividad (Resultados de IA) */
     .activity-box {
         background-color: #333333;
         border-left: 5px solid #FD531E;
@@ -40,43 +56,45 @@ custom_css = """
         border-radius: 10px;
         margin-bottom: 20px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        color: #FAFAFA !important;
     }
-
-    .rubric-box {
-        background-color: #1e1e1e;
-        border: 1px dashed #149852;
-        padding: 20px;
-        border-radius: 10px;
-        margin-top: 30px;
+    
+    .activity-box h2 {
+        font-size: 1.4rem;
+        border-bottom: none;
+        margin-top: 0;
     }
 
     /* Botones */
     .stButton>button {
         background-color: #FD531E;
-        color: white;
+        color: white !important;
         border-radius: 5px;
         border: none;
         padding: 10px 25px;
         font-weight: 700;
         width: 100%;
+        transition: 0.3s;
     }
 
     .stButton>button:hover {
         background-color: #149852;
         border: none;
-        color: white;
+        color: white !important;
+        transform: translateY(-2px);
     }
 
-    /* Tabs */
+    /* Pestañas (Tabs) */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 20px;
+        gap: 15px;
     }
 
     .stTabs [data-baseweb="tab-list"] button {
         background-color: #333333;
-        color: #888888;
-        border-radius: 5px 5px 0 0;
-        padding: 10px 20px;
+        color: #AAAAAA !important;
+        border-radius: 8px 8px 0 0;
+        padding: 10px 25px;
+        border: none;
     }
 
     .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
@@ -135,7 +153,7 @@ with col_logo:
     if os.path.exists("logo-Kuepa.png"):
         st.image("logo-Kuepa.png", width=220)
 
-st.title("MentorIA KP - Técnicos Laborales KUEPA")
+st.title("MentorIA KP - Técnicos Laborales")
 
 tab1, tab2 = st.tabs(["👨‍🏫 MÓDULO DOCENTE", "🎓 MÓDULO ESTUDIANTE"])
 
@@ -148,13 +166,13 @@ with tab1:
     with st.container():
         c1, c2 = st.columns(2)
         p_sel = c1.selectbox("Programa:", sorted(df_prog['Programa'].unique()))
-        t_filtro = c2.radio("Contexto:", ["Por Empresa", "Por Sector"], horizontal=True)
+        t_filtro = c2.radio("Contexto de la actividad:", ["Por Empresa", "Por Sector"], horizontal=True)
         
         if t_filtro == "Por Empresa":
-            sel_e = st.selectbox("Empresa:", sorted(df['Empresa'].unique()))
+            sel_e = st.selectbox("Empresa Destino:", sorted(df['Empresa'].unique()))
             ctx = f"Empresa: {sel_e}. Bitácora: " + ", ".join([f"{k}:{v}" for k,v in df[df['Empresa']==sel_e].iloc[0].items()])
         else:
-            sel_s = st.selectbox("Sector:", sorted(sectores))
+            sel_s = st.selectbox("Sector Industrial:", sorted(sectores))
             ctx = f"Sector Industrial: {sel_s}"
             
         tema = st.text_input("Tema de la sesión (ej. Conciliación bancaria, Empatía digital):")
@@ -166,7 +184,7 @@ with tab1:
                 Actúa como un Diseñador Instruccional Senior de Kuepa. Crea un reto de 20 min para el programa {p_sel} sobre {tema}.
                 Contexto: {ctx}
 
-                ESTRUCTURA DE RESPUESTA (Usa Markdown):
+                ESTRUCTURA DE RESPUESTA (Usa Markdown estricto con '##' para cada sección):
                 ## 📝 EL ESCENARIO CREATIVO
                 (Inventa una situación real, un problema o una historia breve del sector/empresa. Entrega aquí los DATOS BASE: cifras, correos, o descripción de una gráfica).
 
@@ -182,24 +200,31 @@ with tab1:
                 Tono: Profesional, minimalista, inspirador.
                 """
                 
-                res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ).choices[0].message.content
-                
-                # Dividir la respuesta por secciones para ponerlas en cajas
-                sections = res.split("##")
-                for section in sections:
-                    if section.strip():
-                        st.markdown(f'<div class="activity-box">## {section}</div>', unsafe_allow_html=True)
+                try:
+                    res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ).choices[0].message.content
+                    
+                    # Dividir la respuesta por secciones para ponerlas en cajas dinámicas
+                    sections = res.split("##")
+                    for section in sections:
+                        if section.strip():
+                            st.markdown(f'<div class="activity-box"><h2>{section.splitlines()[0]}</h2><p>{"<br>".join(section.splitlines()[1:])}</p></div>', unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"Error generando actividad: {e}")
         else:
-            st.warning("Escribe un tema primero.")
+            st.warning("Escribe un tema primero para generar el reto.")
 
 # ==========================================
 # ESTUDIANTES
 # ==========================================
 with tab2:
     st.markdown("### 🛡️ Guía de Éxito en la Práctica")
-    e_est = st.selectbox("Selecciona la empresa:", sorted(df['Empresa'].unique()))
+    e_est = st.selectbox("Selecciona tu empresa destino:", sorted(df['Empresa'].unique()))
     
-    if st.button("🛡️ SOLICITAR MENTORÍA"):
-        p_est = f"Como mentor de Kuepa, dame 3 consejos prácticos y motivadores para destacar en {e_est}. Habla de forma cercana y enfocada a la acción."
-        res_est = client.chat.completions.create(messages=[{"role": "user", "content": p_est}], model=MODELO_GROQ).choices[0].message.content
-        st.markdown(f'<div class="activity-box">{res_est}</div>', unsafe_allow_html=True)
+    if st.button("🛡️ SOLICITAR CONSEJOS DE MENTORÍA"):
+        with st.spinner("Conectando con tu mentor virtual..."):
+            p_est = f"Como mentor de Kuepa, dame 3 consejos prácticos y motivadores para destacar en mi práctica en la empresa {e_est}. Habla de forma cercana y enfocada a la acción. Usa formato Markdown."
+            try:
+                res_est = client.chat.completions.create(messages=[{"role": "user", "content": p_est}], model=MODELO_GROQ).choices[0].message.content
+                st.markdown(f'<div class="activity-box">{res_est}</div>', unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"Error generando consejos: {e}")

@@ -5,16 +5,15 @@ import google.generativeai as genai
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Kuepa Insight Engine", page_icon="🎓", layout="wide")
 
-# --- 2. CONFIGURACIÓN DE IA (CONEXIÓN ESTABLE) ---
+# --- 2. CONFIGURACIÓN DE IA (MÁXIMA COMPATIBILIDAD) ---
 try:
     if "GEMINI_API_KEY" not in st.secrets:
         st.error("❌ Falta la clave 'GEMINI_API_KEY' en los Secrets de Streamlit.")
         st.stop()
     
-    API_KEY = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=API_KEY)
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # Usamos el nombre de modelo más estándar y compatible actualmente
+    # Intentamos con el nombre estándar. Si falla, el bloque try lo atrapará.
     model = genai.GenerativeModel('gemini-1.5-flash')
     
 except Exception as e:
@@ -29,22 +28,13 @@ def load_data():
         SHEET_ID = "11S3HLgveTiMJqMWp6Ejrj2MwELbjO_wu_yWtok8F3c8"
         SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
         
-        # Leemos todo como texto (str) para evitar errores de celdas vacías o números
+        # dtype=str para evitar errores con números/celdas vacías
         df_empresas = pd.read_csv(SHEET_URL, dtype=str)
         df_empresas.columns = df_empresas.columns.str.strip()
         
-        # Buscador de columna de Empresa (por si cambia el nombre en el Excel)
-        col_empresa = None
-        for col in df_empresas.columns:
-            if col.lower() in ['empresa', 'empresas asociadas', 'nombre de la empresa']:
-                col_empresa = col
-                break
-        
-        if col_empresa:
-            df_empresas.rename(columns={col_empresa: 'Empresa'}, inplace=True)
-        else:
-            # Si no la encuentra, asumimos la primera columna como la empresa
-            df_empresas.rename(columns={df_empresas.columns[0]: 'Empresa'}, inplace=True)
+        # Buscador inteligente de columna 'Empresa'
+        col_empresa = next((c for c in df_empresas.columns if c.lower() in ['empresa', 'empresas asociadas', 'nombre']), df_empresas.columns[0])
+        df_empresas.rename(columns={col_empresa: 'Empresa'}, inplace=True)
         
         df_empresas.fillna("Información no disponible", inplace=True)
 
@@ -55,7 +45,6 @@ def load_data():
             if 'Perfil_Del_Egresado' in df_programas.columns:
                 df_programas.rename(columns={'Perfil_Del_Egresado': 'Perfil'}, inplace=True)
         except:
-            # Respaldo si falla la carga del CSV en GitHub
             df_programas = pd.DataFrame({
                 'Programa': ['General'], 
                 'Perfil': ['Estudiante Técnico'], 
@@ -94,13 +83,13 @@ with tab1:
         emp_list = sorted(df['Empresa'].unique())
         empresa_profe = st.selectbox("Empresa Destino:", emp_list, key="profe_emp")
     
-    tema_clase = st.text_input("Tema de la clase (Habilidad técnica):", placeholder="Ej: Tablas Dinámicas, SQL, Protocolos...")
+    tema_clase = st.text_input("Tema de la clase:", placeholder="Ej: Excel, Servicio al Cliente...")
 
     if st.button("🚀 Generar Actividad"):
         if not tema_clase:
-            st.warning("Escribe un tema para la clase.")
+            st.warning("Escribe un tema.")
         else:
-            with st.spinner("La IA está analizando la bitácora empresarial..."):
+            with st.spinner("Generando contenido..."):
                 try:
                     data_emp = df[df['Empresa'] == empresa_profe].iloc[0]
                     data_prog = df_prog[df_prog['Programa'] == prog_sel].iloc[0] if prog_sel in df_prog['Programa'].values else {}
@@ -108,66 +97,48 @@ with tab1:
                     info_contexto = "\n".join([f"- {k}: {v}" for k, v in data_emp.items()])
 
                     prompt = f"""
-                    Actúa como un Lead Instructor de Kuepa.
-                    TEMA: {tema_clase}
-                    PROGRAMA: {prog_sel}
-                    PERFIL: {data_prog.get('Perfil', 'Estudiante técnico')}
-
-                    INFO EMPRESA:
-                    {info_contexto}
-
-                    MISIÓN: Crea un reto práctico de 15 min para Breakrooms basado en esta empresa.
-                    Responde: 1. El Reto, 2. Herramientas, 3. KPI de éxito.
+                    Actúa como un Lead Instructor de Kuepa. 
+                    Diseña un reto de 15 min para {prog_sel} sobre el tema {tema_clase}.
+                    Usa esta info real de la empresa {empresa_profe}: {info_contexto}.
+                    Responde: 1. Reto, 2. Herramientas, 3. KPI.
                     """
                     
+                    # Llamada directa y limpia
                     response = model.generate_content(prompt)
-                    st.success("🎯 Propuesta de Actividad:")
+                    st.success("🎯 Propuesta:")
                     st.markdown(response.text)
                 except Exception as e:
-                    st.error(f"Error al generar contenido: {e}")
+                    st.error(f"La IA no pudo responder. Detalles: {e}")
 
 # ==========================================
 # PESTAÑA 2: ESTUDIANTES
 # ==========================================
 with tab2:
-    st.header("🛡️ Guía de Éxito en la Práctica")
-    empresa_est = st.selectbox("Selecciona tu empresa:", sorted(df['Empresa'].unique()), key="est_emp")
-    
+    st.header("🛡️ Guía de Éxito")
+    empresa_est = st.selectbox("Empresa:", sorted(df['Empresa'].unique()), key="est_emp")
     data_est = df[df['Empresa'] == empresa_est].iloc[0]
     
-    c1, c2 = st.columns(2)
-    c1.metric("👔 Vestuario", data_est.get('Código de vestimenta', 'No especifica'))
-    c2.metric("🏢 Sector", data_est.get('Sector', 'General'))
+    st.info(f"Vestuario: {data_est.get('Código de vestimenta', 'No especifica')}")
 
     if st.button("🛡️ Obtener Consejos"):
-        with st.spinner("Preparando tus tips..."):
-            info_est = "\n".join([f"- {k}: {v}" for k, v in data_est.items()])
-            prompt = f"Dame 3 consejos clave para tener éxito en mi práctica en la empresa {empresa_est} basándote en esta info: {info_est}."
-            
-            try:
-                response = model.generate_content(prompt)
-                st.info("Estrategia recomendada:")
-                st.write(response.text)
-            except Exception as e:
-                st.error(f"Error: {e}")
+        try:
+            prompt = f"Dame 3 consejos para triunfar en {empresa_est}."
+            response = model.generate_content(prompt)
+            st.write(response.text)
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 # ==========================================
 # PESTAÑA 3: GESTORES
 # ==========================================
 with tab3:
-    st.header("🤝 Preparación de Visita")
-    empresa_gest = st.selectbox("Empresa a visitar:", sorted(df['Empresa'].unique()), key="gest_emp")
-    data_gest = df[df['Empresa'] == empresa_gest].iloc[0]
-
-    st.write(f"**Estado:** {data_gest.get('ESTADO', 'Activo')}")
+    st.header("🤝 Visita Empresarial")
+    empresa_gest = st.selectbox("Empresa:", sorted(df['Empresa'].unique()), key="gest_emp")
     
     if st.button("🤝 Generar Guion"):
-        with st.spinner("Creando guion..."):
-            info_gest = "\n".join([f"- {k}: {v}" for k, v in data_gest.items()])
-            prompt = f"Genera un guion corto de reunión para visitar {empresa_gest} usando estos datos: {info_gest}."
-            
-            try:
-                response = model.generate_content(prompt)
-                st.markdown(response.text)
-            except Exception as e:
-                st.error(f"Error: {e}")
+        try:
+            prompt = f"Dame un guion para visitar la empresa {empresa_gest}."
+            response = model.generate_content(prompt)
+            st.markdown(response.text)
+        except Exception as e:
+            st.error(f"Error: {e}")

@@ -161,7 +161,6 @@ with tab1:
         
         if t_filtro == "Por Empresas":
             sel_e = st.multiselect("Selecciona las Empresas (Máximo 5):", sorted(df['Empresa'].unique()), max_selections=5)
-            # Construir contexto acumulado de las empresas seleccionadas
             if sel_e:
                 info_total_empresas = []
                 for emp in sel_e:
@@ -180,7 +179,7 @@ with tab1:
         formato_recurso = c4.selectbox("Formato del Recurso:", [
             "🎲 Aleatorio (Recomendado por IA)", 
             "📊 Tabla de Datos", 
-            "📈 Análisis de Gráfico / Tendencia", 
+            "📈 Gráfico Visual (Emoji-BarChart)", 
             "📖 Caso Real / Storytelling", 
             "✉️ Simulación de Comunicación", 
             "🕵️‍♂️ Diagnóstico de Error"
@@ -188,45 +187,44 @@ with tab1:
 
     if st.button("🚀 GENERAR RETO DISRUPTIVO"):
         if tema and (ctx != "" or t_filtro == "Por Sector"):
-            with st.spinner("Diseñando experiencia de aprendizaje multi-entorno..."):
+            with st.spinner("Diseñando experiencia visual y creativa..."):
                 
                 # INSTRUCCIÓN CONDICIONAL SEGÚN EL FORMATO ELEGIDO
                 if "Aleatorio" in formato_recurso:
-                    instruccion_formato = "ELIGE el formato que mejor se adapte (Tabla, Gráfico, Caso, Simulación o Diagnóstico)."
+                    instruccion_formato = "ELIGE el formato que mejor se adapte. Si eliges gráfico, usa el estilo de barras con emojis."
                 elif "Tabla" in formato_recurso:
-                    instruccion_formato = "OBLIGATORIO: Presenta el problema creando una pequeña tabla de datos crudos (máximo 5 filas) en Markdown."
+                    instruccion_formato = "OBLIGATORIO: Presenta el problema con una tabla de datos crudos en formato Markdown."
                 elif "Gráfico" in formato_recurso:
-                    instruccion_formato = "OBLIGATORIO: Presenta el problema describiendo textualmente el comportamiento de una gráfica o indicador."
+                    instruccion_formato = """
+                    OBLIGATORIO: Presenta el problema dibujando un GRÁFICO DE BARRAS VISUAL usando emojis de bloques (ej: 🟩, 🟦, 🟧). 
+                    Cada bloque representa una unidad o valor. Debe verse como una gráfica real hecha con texto.
+                    """
                 elif "Caso Real" in formato_recurso:
                     instruccion_formato = "OBLIGATORIO: Presenta el problema narrando un caso real o storytelling inmersivo."
                 elif "Simulación" in formato_recurso:
-                    instruccion_formato = "OBLIGATORIO: Presenta el problema simulando una comunicación real (Correo, Ticket o WhatsApp)."
+                    instruccion_formato = "OBLIGATORIO: Presenta el problema simulando un Correo, Ticket o WhatsApp."
                 elif "Diagnóstico" in formato_recurso:
-                    instruccion_formato = "OBLIGATORIO: Presenta un proceso que se hizo MAL para que el estudiante actúe como solucionador."
+                    instruccion_formato = "OBLIGATORIO: Presenta un proceso con errores para que el estudiante los encuentre."
 
                 prompt = f"""
-                Actúa como un Diseñador Instruccional Senior de Kuepa. Crea un reto de 20 min para el programa '{p_sel}' sobre el tema '{tema}'.
-                
-                CONTEXTO DE REFERENCIA: {ctx}
-                
-                INSTRUCCIÓN DE FORMATO: {instruccion_formato}
+                Actúa como un Diseñador Instruccional Senior de Kuepa. Crea un reto de 20 min para el programa '{p_sel}' sobre '{tema}'.
+                CONTEXTO: {ctx}
+                FORMATO REQUERIDO: {instruccion_formato}
 
-                Si hay varias empresas seleccionadas, crea un reto comparativo o un caso donde el estudiante deba atender requerimientos de estas diferentes entidades.
-
-                ESTRUCTURA DE RESPUESTA (Usa Markdown estricto con '##' para cada sección):
+                ESTRUCTURA DE RESPUESTA:
                 ## 📝 EL ESCENARIO CREATIVO
-                (Desarrolla aquí el problema. Entrega todos los datos base aquí mismo).
+                (Incluye aquí el material base: la tabla, el gráfico de emojis, el correo o la historia).
 
                 ## 🎯 EL RETO (ACCIÓN)
-                (Qué debe hacer el estudiante individualmente en 15 minutos).
+                (Actividad individual de 15 min).
 
                 ## 💻 ENTREGABLE TANGIBLE Y HERRAMIENTAS
-                (Define UN producto digital claro. Sugiere el uso de Google Suite/Canva e incluye el uso estratégico de una IA).
+                (Producto digital claro. Sugiere Google Suite/Canva e integración estratégica de IA).
 
                 ## 📋 RÚBRICA PARA EL DOCENTE
-                (3 elementos clave a validar).
-                
-                Tono: Profesional, minimalista, inspirador.
+                (3 criterios clave de evaluación).
+
+                Tono: Profesional, minimalista, inspirador, estilo Kuepa.
                 """
                 
                 try:
@@ -250,9 +248,9 @@ with tab2:
     
     if st.button("🛡️ SOLICITAR CONSEJOS DE MENTORÍA"):
         with st.spinner("Conectando con tu mentor virtual..."):
-            p_est = f"Como mentor de Kuepa, dame 3 consejos prácticos y motivadores para destacar en mi práctica en la empresa {e_est}. Habla de forma cercana y enfocada a la acción. Usa formato Markdown."
+            p_est = f"Como mentor de Kuepa, dame 3 consejos prácticos para destacar en {e_est}."
             try:
                 res_est = client.chat.completions.create(messages=[{"role": "user", "content": p_est}], model=MODELO_GROQ).choices[0].message.content
                 st.markdown(f'<div class="activity-box">{res_est}</div>', unsafe_allow_html=True)
             except Exception as e:
-                st.error(f"Error generando consejos: {e}")
+                st.error(f"Error: {e}")
